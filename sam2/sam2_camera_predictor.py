@@ -6,7 +6,6 @@
 
 from collections import OrderedDict
 
-import cv2
 import numpy as np
 
 import torch
@@ -52,15 +51,21 @@ class SAM2CameraPredictor(SAM2Base):
         img_std=(0.229, 0.224, 0.225),
     ):
         if isinstance(img, np.ndarray):
-            img_np = img
-            img_np = cv2.resize(img_np, (image_size, image_size)) / 255.0
             height, width = img.shape[:2]
+            img = torch.from_numpy(img).permute(2, 0, 1).float()
+            img = F.interpolate(
+                img[None],
+                size=(image_size, image_size),
+                mode="bilinear",
+                align_corners=False,
+            )[0]
+            img = img / 255.0
         else:
             img_np = (
                 np.array(img.convert("RGB").resize((image_size, image_size))) / 255.0
             )
             width, height = img.size
-        img = torch.from_numpy(img_np).permute(2, 0, 1).float()
+            img = torch.from_numpy(img_np).permute(2, 0, 1).float()
 
         img_mean = torch.tensor(img_mean, dtype=torch.float32)[:, None, None]
         img_std = torch.tensor(img_std, dtype=torch.float32)[:, None, None]
